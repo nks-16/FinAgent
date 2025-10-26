@@ -1,0 +1,12 @@
+:root{--primary:#000;--dark:#000;--light:#ffffff;--accent:#111}
+body{background:#fff;color:#111}
+a, .link-primary{color:#000}
+.navbar{background:#000;color:#fff}
+.navbar .navbar-brand, .navbar .btn, .navbar a{color:#fff}
+.card{background:#fff;border:1px solid #000}
+.btn-primary{background:#000;border-color:#000}
+.btn-outline-primary{border-color:#000;color:#000}
+.btn-outline-primary:hover{background:#000;color:#fff}
+.form-control, .form-select{background:#fff;color:#111;border-color:#000}
+.mono-box{white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f7f7f7;border:1px solid #e3e3e3;padding:12px;border-radius:6px}
+@media (max-width:576px){.navbar .container-fluid{gap:8px}}

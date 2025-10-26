@@ -1,0 +1,59 @@
+services:
+  agent:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - DATABASE_URL=${DATABASE_URL:-mysql+pymysql://finagent:finagent@mysql:3306/finagent}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret}
+      - REQUIRE_AUTH=${REQUIRE_AUTH:-false}
+      - ANOMALY_MODEL_PATH=${ANOMALY_MODEL_PATH:-}
+    volumes:
+      - ./:/app
+      - models_data:/app/models
+    depends_on:
+      - chroma
+      - mysql
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma
+  mysql:
+    image: mysql:8.4
+    environment:
+      - MYSQL_DATABASE=finagent
+      - MYSQL_USER=finagent
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-finagent}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql_data:/var/lib/mysql
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://agent:8000}
+      - VITE_JAVA_BASE_URL=${VITE_JAVA_BASE_URL:-http://backend:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - agent
+  backend:
+    build:
+      context: ./backend
+    environment:
+      - AGENT_BASE_URL=http://agent:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - agent
+volumes:
+  mysql_data:
+  chroma_data:
+  models_data:

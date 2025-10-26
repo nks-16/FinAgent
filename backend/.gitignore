@@ -1,0 +1,5 @@
+# Backend-specific ignores
+/target/
+*.iml
+.idea/
+*.log

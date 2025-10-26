@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "FinAgent API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection for FinAgent FastAPI service"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {"raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"]}
+      }
+    },
+    {
+      "name": "Signup",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/auth/signup", "host": ["{{baseUrl}}"], "path": ["auth","signup"]}
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"P@ssw0rd!\"\n}"},
+        "url": {"raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"]}
+      }
+    },
+    {
+      "name": "Ingest (file)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "file", "type": "file", "src": [], "description": "Upload txt/pdf/csv"}
+          ]
+        },
+        "url": {"raw": "{{baseUrl}}/ingest", "host": ["{{baseUrl}}"], "path": ["ingest"]}
+      }
+    },
+    {
+      "name": "Query",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"query\": \"What happened to revenue?\"\n}"},
+        "url": {"raw": "{{baseUrl}}/query", "host": ["{{baseUrl}}"], "path": ["query"]}
+      }
+    },
+    {
+      "name": "Collection Stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {"raw": "{{baseUrl}}/collections/stats", "host": ["{{baseUrl}}"], "path": ["collections","stats"]}
+      }
+    },
+    {
+      "name": "Collection Reset",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {"raw": "{{baseUrl}}/collections/reset", "host": ["{{baseUrl}}"], "path": ["collections","reset"]}
+      }
+    },
+    {
+      "name": "Anomaly Detect (file)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "file", "type": "file", "src": ["data/sample/financials.csv"]}
+          ]
+        },
+        "url": {"raw": "{{baseUrl}}/anomaly/detect", "host": ["{{baseUrl}}"], "path": ["anomaly","detect"]}
+      }
+    },
+    {
+      "name": "Anomaly Detect (JSON)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"records\": [\n    {\n      \"revenue\": 100, \"cogs\": 40, \"opex\": 30, \"net_income\": 20\n    },\n    {\n      \"revenue\": 5000, \"cogs\": 10, \"opex\": 10, \"net_income\": 10\n    }\n  ],\n  \"contamination\": 0.1,\n  \"top_k\": 2,\n  \"explain\": true\n}"},
+        "url": {"raw": "{{baseUrl}}/anomaly/detect", "host": ["{{baseUrl}}"], "path": ["anomaly","detect"]}
+      }
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8000"}
+  ]
+}

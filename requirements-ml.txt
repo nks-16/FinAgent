@@ -1,0 +1,11 @@
+# Optional ML and embedding packages - install on machines with appropriate hardware
+chromadb==0.4.24
+scikit-learn==1.3.2
+numpy==1.27.6
+pandas==2.2.2
+PyMuPDF==1.24.14
+pdfminer.six==20221105
+shap==0.41.0
+sentence-transformers==2.2.2
+llama-cpp-python
+google-generativeai

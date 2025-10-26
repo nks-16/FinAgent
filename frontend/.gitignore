@@ -1,0 +1,6 @@
+# Frontend-specific ignores
+/node_modules/
+/dist/
+/.vite/
+.eslintcache
+*.log
