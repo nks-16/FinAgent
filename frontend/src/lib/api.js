@@ -17,6 +17,7 @@ export const api = {
   reset: () => client.post('/collections/reset').then(r=>r.data),
   query: (query) => client.post('/query', { query }).then(r=>r.data),
   chat: (prompt) => client.post('/chat', { prompt }).then(r=>r.data),
+  recommendations: (data) => client.post('/recommendations', data).then(r=>r.data),
   ingest: (file) => {
     const form = new FormData(); form.append('file', file)
     return client.post('/ingest', form, { headers: { 'Content-Type':'multipart/form-data' } }).then(r=>r.data)

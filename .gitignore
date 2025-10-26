@@ -57,4 +57,4 @@ Thumbs.db
 # Docker
 .docker/
 
-\.env.example
+.env.example

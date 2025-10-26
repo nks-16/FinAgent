@@ -24,8 +24,8 @@ export default function Signup(){
     <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-12 col-md-6 col-lg-4">
-          <div className="card p-4">
-            <h3 className="mb-3">Create account</h3>
+          <div className="glass-card">
+            <h3 className="mb-3" style={{fontWeight:700}}>Create account</h3>
             {err && <div className="alert alert-danger">{String(err)}</div>}
             {ok && <div className="alert alert-success">{String(ok)}</div>}
             <form onSubmit={submit}>

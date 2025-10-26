@@ -21,8 +21,8 @@ export default function Login({ onLogin }){
     <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-12 col-md-6 col-lg-4">
-          <div className="card p-4">
-            <h3 className="mb-3">Sign in</h3>
+          <div className="glass-card">
+            <h3 className="mb-3" style={{fontWeight:700}}>Sign in</h3>
             {err && <div className="alert alert-danger">{String(err)}</div>}
             <form onSubmit={submit}>
               <div className="mb-3">

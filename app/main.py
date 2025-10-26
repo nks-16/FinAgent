@@ -8,6 +8,7 @@ from .llm_provider import get_llm_and_embeddings
 from .ingest import ingest_file_bytes
 from .retrieval import retrieve_context, build_rag_prompt
 from .chat import chat_answer
+from .recommendations import generate_recommendations
 from .chroma_client import reset_chroma_collection
 from .auth import (
     init_db, get_db, handle_signup, handle_login,
@@ -215,5 +216,31 @@ class ChatRequest(BaseModel):
 def chat(req: ChatRequest, _user=Depends(_require_auth_optional)):
     try:
         return chat_answer(req.prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Recommendations (Budget, Debt, Emergency Fund, Risk) ---------
+class RecommendationRequest(BaseModel):
+    monthly_income: float | None = None
+    current_needs: float | None = None
+    current_wants: float | None = None
+    current_savings: float | None = None
+    debts: list[dict] | None = None
+    monthly_expenses: float | None = None
+    risk_profile: str | None = None
+    age: int | None = None
+    income: float | None = None
+    savings: float | None = None
+    debt: float | None = None
+    investment_horizon_years: int | None = None
+
+
+@app.post("/recommendations")
+def recommendations(req: RecommendationRequest, _user=Depends(_require_auth_optional)):
+    """Generate personalized financial recommendations based on user data."""
+    try:
+        user_data = req.dict(exclude_none=True)
+        return generate_recommendations(user_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
