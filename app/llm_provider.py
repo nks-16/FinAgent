@@ -38,39 +38,60 @@ def get_gemini_clients():
 
     Env vars:
       - GEMINI_API_KEY or GOOGLE_API_KEY
-      - GEMINI_MODEL (default: gemini-1.5-flash)
+      - GEMINI_MODEL (default: gemini-2.0-flash-exp)
+    
+    Uses the new google-genai SDK pattern with genai.Client()
     """
     try:
-        import google.generativeai as genai  # type: ignore
-    except Exception:
-        genai = None
+        from google import genai
+    except ImportError:
+        try:
+            # Fallback to old SDK if available
+            import google.generativeai as genai  # type: ignore
+            USE_OLD_SDK = True
+        except Exception:
+            genai = None
+            USE_OLD_SDK = False
+    else:
+        USE_OLD_SDK = False
 
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
-    def _configure():
+    def llm_generate(prompt: str):
         if genai is None:
-            raise RuntimeError("google-generativeai not installed or configured")
+            raise RuntimeError("google-genai or google-generativeai not installed")
+        
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY/GOOGLE_API_KEY not set")
-        genai.configure(api_key=api_key)
-
-    def llm_generate(prompt: str):
-        _configure()
-        model = genai.GenerativeModel(model_name)
-        resp = model.generate_content(prompt)
-        # Prefer .text if available else join parts
-        if hasattr(resp, "text") and resp.text:
-            return resp.text
-        # Fallback join
+        
         try:
-            parts = []
-            for cand in getattr(resp, "candidates", []) or []:
-                for part in getattr(cand, "content", {}).get("parts", []) or []:
-                    parts.append(str(getattr(part, "text", part)))
-            return "\n".join(parts) if parts else ""
-        except Exception:
-            return ""
+            if USE_OLD_SDK:
+                # Old SDK pattern (google.generativeai)
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name)
+                resp = model.generate_content(prompt)
+                if hasattr(resp, "text") and resp.text:
+                    return resp.text
+                # Fallback join
+                try:
+                    parts = []
+                    for cand in getattr(resp, "candidates", []) or []:
+                        for part in getattr(cand, "content", {}).get("parts", []) or []:
+                            parts.append(str(getattr(part, "text", part)))
+                    return "\n".join(parts) if parts else ""
+                except Exception:
+                    return ""
+            else:
+                # New SDK pattern (google.genai.Client)
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                return response.text
+        except Exception as e:
+            raise RuntimeError(f"Gemini API error: {str(e)}")
 
     def embed_texts(texts):
         # Keep lightweight fallback embedding to avoid heavy deps by default

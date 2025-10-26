@@ -27,8 +27,8 @@ export const api = {
     return client.post('/anomaly/detect', form, { headers: { 'Content-Type':'multipart/form-data' } }).then(r=>r.data)
   },
   anomalyJson: (records, opts={}) => {
-    const payload = { records, ...opts }
-    return client.post('/anomaly/detect', payload).then(r=>r.data)
+    const payload = { records, contamination: opts.contamination || 0.05, top_k: opts.top_k || 10, explain: opts.explain || false }
+    return client.post('/anomaly/detect-json', payload).then(r=>r.data)
   },
   anomalyStatus: () => client.get('/anomaly/status').then(r=>r.data)
 }

@@ -156,35 +156,34 @@ def collection_reset(_user=Depends(_require_auth_optional)):
 # -------- Anomaly Detection ---------
 class AnomalyJSONRequest(BaseModel):
     records: list[dict]
-    contamination: float | None = 0.05
-    top_k: int | None = 10
-    explain: bool | None = False
+    contamination: float = 0.05
+    top_k: int = 10
+    explain: bool = False
 
 
 @app.post("/anomaly/detect")
 async def anomaly_detect(
-    file: UploadFile | None = File(default=None),
+    file: UploadFile = File(None),
     _user=Depends(_require_auth_optional),
-    req: AnomalyJSONRequest | None = None,
 ):
     """
     Detect anomalies from a CSV file upload or JSON body of records.
     Prefer file upload when provided. If neither provided, 400.
     """
     try:
-        if file is not None:
+        if file is not None and file.filename:
+            # File upload mode
             data = await file.read()
             records = parse_csv_bytes(data)
             contamination = 0.05
             top_k = 10
             explain = False
-        elif req is not None:
-            records = req.records
-            contamination = req.contamination or 0.05
-            top_k = req.top_k or 10
-            explain = bool(req.explain)
         else:
-            raise HTTPException(status_code=400, detail="Provide either a CSV file or JSON records")
+            # No file, return error asking for proper format
+            raise HTTPException(
+                status_code=400, 
+                detail="File upload required. Use multipart/form-data with 'file' field."
+            )
 
         result = detect_anomalies_from_records(
             records,
@@ -196,6 +195,27 @@ async def anomaly_detect(
         return result
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/anomaly/detect-json")
+def anomaly_detect_json(
+    req: AnomalyJSONRequest,
+    _user=Depends(_require_auth_optional),
+):
+    """
+    Detect anomalies from JSON records (for testing/API calls).
+    """
+    try:
+        result = detect_anomalies_from_records(
+            req.records,
+            contamination=req.contamination,
+            top_k=req.top_k,
+            explain=req.explain,
+            model=getattr(app.state, "anomaly_model", None),
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

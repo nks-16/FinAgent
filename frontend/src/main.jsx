@@ -1,8 +1,7 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import 'bootstrap/dist/css/bootstrap.min.css'
-import './styles-glass.css'
+import './index.css'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -16,7 +15,12 @@ function App() {
   const onLogout = () => { localStorage.removeItem('token'); setToken('') }
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <Routes>
           <Route path="/login" element={<Login onLogin={onLogin} />} />
           <Route path="/signup" element={<Signup />} />

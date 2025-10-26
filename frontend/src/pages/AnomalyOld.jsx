@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import ThemeToggle from '../components/ThemeToggle'
 
 export default function Anomaly(){
   const [result, setResult] = useState(null)
@@ -39,28 +38,27 @@ export default function Anomaly(){
       <nav className="navbar navbar-expand mb-4">
         <div className="container-fluid">
           <Link to="/" className="navbar-brand">FinAgent</Link>
-          <div className="d-flex gap-2 align-items-center">
-            <Link className="btn btn-outline-secondary btn-sm" to="/">Dashboard</Link>
-            <ThemeToggle />
+          <div className="d-flex gap-2">
+            <Link className="btn btn-outline-secondary" to="/">Dashboard</Link>
           </div>
         </div>
       </nav>
 
       <div className="row g-4">
         <div className="col-12 col-lg-6">
-          <div className="glass-card h-100">
-            <h5 style={{fontWeight:700}}>Detect Anomalies (CSV)</h5>
+          <div className="card p-3 h-100">
+            <h5>Detect anomalies (CSV upload)</h5>
             <div className="small text-muted mb-2">
               Model: {status ? (status.loaded ? `loaded from ${status.path || 'unknown'}` : 'not loaded (training on-the-fly)') : '...'}
             </div>
             <input className="form-control" type="file" accept=".csv" onChange={onFile} disabled={busy} />
             <p className="small text-muted mt-2">Try <code>data/sample/financials.csv</code></p>
-            <button className="btn btn-outline-primary mt-2" onClick={sampleJson} disabled={busy}>Run Sample JSON</button>
+            <button className="btn btn-outline-primary mt-2" onClick={sampleJson} disabled={busy}>Run sample JSON</button>
           </div>
         </div>
         <div className="col-12 col-lg-6">
-          <div className="glass-card h-100">
-            <h5 style={{fontWeight:700}}>Results</h5>
+          <div className="card p-3 h-100">
+            <h5>Results</h5>
             {err && <div className="alert alert-danger">{String(err)}</div>}
             <pre className="small mb-0" style={{minHeight: '200px'}}>{result ? JSON.stringify(result, null, 2) : (busy ? 'Analyzing...' : 'No results yet')}</pre>
           </div>

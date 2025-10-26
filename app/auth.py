@@ -21,7 +21,8 @@ engine = create_engine(DB_URL, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 Base = declarative_base()
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use Argon2 - modern, secure, no 72-byte limitation
+pwd_ctx = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 class User(Base):
@@ -59,10 +60,12 @@ class TokenResponse(BaseModel):
 
 
 def hash_password(p: str) -> str:
+    # Argon2 has no length limitation, can handle any password length
     return pwd_ctx.hash(p)
 
 
 def verify_password(p: str, h: str) -> bool:
+    # Argon2 verification - no truncation needed
     return pwd_ctx.verify(p, h)
 
 

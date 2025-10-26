@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-white dark:bg-black text-black dark:text-white transition-colors duration-300;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-black dark:border-white bg-transparent text-black dark:text-white px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-6;
+  }
+  
+  .input-field {
+    @apply w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-black dark:text-white rounded-lg px-4 py-3 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent placeholder:text-gray-500 dark:placeholder:text-gray-400;
+  }
+  
+  .navbar {
+    @apply bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-sm;
+  }
+  
+  .theme-toggle {
+    @apply cursor-pointer bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-800 hover:scale-105;
+  }
+}
