@@ -1,4 +1,5 @@
 import os
+from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -15,6 +16,37 @@ from .auth import (
     SignupRequest, LoginRequest, TokenResponse, decode_token,
 )
 from .anomaly import detect_anomalies_from_records, parse_csv_bytes, load_isoforest_model
+from .conversation_models import (
+    ChatRequest, ChatResponse, ConversationCreate, ConversationResponse,
+    ConversationWithMessages
+)
+from .conversation_service import (
+    create_conversation_session, get_conversation_session, get_user_conversations,
+    save_message, get_conversation_messages, get_conversation_with_messages,
+    build_conversation_context, delete_conversation, archive_conversation,
+    get_or_create_active_session
+)
+from .financial_db import init_financial_db, get_db as get_financial_db
+from .financial_schemas import (
+    UserProfileResponse, UserProfileUpdate,
+    AccountCreate, AccountUpdate, AccountResponse,
+    TransactionCreate, TransactionUpdate, TransactionResponse,
+    BudgetCreate, BudgetUpdate, BudgetResponse,
+    FinancialGoalCreate, FinancialGoalUpdate, FinancialGoalResponse,
+    DebtCreate, DebtUpdate, DebtResponse,
+    InvestmentCreate, InvestmentUpdate, InvestmentResponse,
+    FinancialSummary
+)
+from .financial_service import (
+    get_or_create_user_profile, update_user_profile,
+    create_account, get_accounts, get_account, update_account, delete_account,
+    create_transaction, get_transactions, update_transaction, delete_transaction,
+    create_budget, get_budgets, update_budget,
+    create_goal, get_goals, update_goal, delete_goal,
+    create_debt, get_debts, update_debt, delete_debt,
+    create_investment, get_investments, update_investment, delete_investment,
+    get_financial_summary, get_spending_by_category, get_income_vs_expenses_trend
+)
 
 load_dotenv()
 app = FastAPI(title="FinAgent - LLM Financial Analyzer (agent)")
@@ -40,6 +72,11 @@ def startup_event():
         init_db()
     except Exception:
         pass
+    # init financial database tables
+    try:
+        init_financial_db()
+    except Exception as e:
+        print(f"Financial DB init failed: {e}")
     # initialize provider
     try:
         app.state.llm, app.state.embed = get_llm_and_embeddings()
@@ -228,14 +265,162 @@ def anomaly_status():
 
 
 # -------- Chat (RAG + Web + LLM) ---------
-class ChatRequest(BaseModel):
-    prompt: str
+# -------- Chat with Conversation History ---------
 
-
-@app.post("/chat")
+@app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, _user=Depends(_require_auth_optional)):
+    """
+    Chat endpoint with conversation history support.
+    If session_id is provided, continues that conversation.
+    If not, creates a new session or uses the most recent active one.
+    """
     try:
-        return chat_answer(req.prompt)
+        # Determine user_id (use authenticated user or anonymous)
+        user_id = _user if _user else "anonymous"
+        
+        # Get or create session
+        if req.session_id:
+            session = get_conversation_session(req.session_id)
+            if not session:
+                raise HTTPException(status_code=404, detail=f"Session {req.session_id} not found")
+            # Verify user owns this session
+            if session.user_id != user_id:
+                raise HTTPException(status_code=403, detail="Access denied to this session")
+        else:
+            # Get most recent active session or create new one
+            session = get_or_create_active_session(user_id)
+        
+        # Save user message
+        save_message(session.session_id, "user", req.query)
+        
+        # Build conversation context from history with financial data
+        conversation_context = build_conversation_context(session.session_id, max_messages=10, user_id=user_id)
+        
+        # Get chat answer with context
+        from .chat import chat_answer_with_context
+        result = chat_answer_with_context(req.query, conversation_context)
+        
+        # Save assistant response
+        assistant_msg = save_message(session.session_id, "assistant", result["answer"])
+        
+        return ChatResponse(
+            answer=result["answer"],
+            session_id=session.session_id,
+            message_index=assistant_msg.message_index
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Conversation Management Endpoints ---------
+
+@app.post("/conversations/new", response_model=ConversationResponse)
+def create_new_conversation(
+    data: ConversationCreate,
+    _user=Depends(_require_auth_optional)
+):
+    """Create a new conversation session"""
+    try:
+        user_id = _user if _user else "anonymous"
+        session = create_conversation_session(user_id, data.title)
+        return ConversationResponse(**session.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/conversations", response_model=List[ConversationResponse])
+def list_conversations(
+    limit: int = 50,
+    active_only: bool = False,
+    _user=Depends(_require_auth_optional)
+):
+    """Get all conversation sessions for the current user"""
+    try:
+        user_id = _user if _user else "anonymous"
+        conversations = get_user_conversations(user_id, limit=limit, active_only=active_only)
+        return conversations
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/conversations/{session_id}", response_model=ConversationWithMessages)
+def get_conversation_detail(
+    session_id: str,
+    _user=Depends(_require_auth_optional)
+):
+    """Get a conversation session with all its messages"""
+    try:
+        user_id = _user if _user else "anonymous"
+        conversation = get_conversation_with_messages(session_id)
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        # Verify user owns this conversation
+        if conversation.session.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this conversation")
+        
+        return conversation
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/conversations/{session_id}")
+def delete_conversation_endpoint(
+    session_id: str,
+    _user=Depends(_require_auth_optional)
+):
+    """Delete a conversation session and all its messages"""
+    try:
+        user_id = _user if _user else "anonymous"
+        
+        # Verify ownership before deletion
+        session = get_conversation_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        if session.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this conversation")
+        
+        success = delete_conversation(session_id)
+        if success:
+            return {"message": "Conversation deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/conversations/{session_id}/archive")
+def archive_conversation_endpoint(
+    session_id: str,
+    _user=Depends(_require_auth_optional)
+):
+    """Archive a conversation (set as inactive)"""
+    try:
+        user_id = _user if _user else "anonymous"
+        
+        # Verify ownership before archiving
+        session = get_conversation_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        if session.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Access denied to this conversation")
+        
+        success = archive_conversation(session_id)
+        if success:
+            return {"message": "Conversation archived successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -264,3 +449,418 @@ def recommendations(req: RecommendationRequest, _user=Depends(_require_auth_opti
         return generate_recommendations(user_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========================================
+# FINANCIAL TRACKER ENDPOINTS
+# ========================================
+
+# -------- User Profile ---------
+
+@app.get("/financial/profile", response_model=UserProfileResponse)
+def get_user_profile(_user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get user's financial profile"""
+    try:
+        user_id = _user if _user else "anonymous"
+        profile = get_or_create_user_profile(db, user_id)
+        return profile
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/profile", response_model=UserProfileResponse)
+def update_profile(data: UserProfileUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update user's financial profile"""
+    try:
+        user_id = _user if _user else "anonymous"
+        profile = update_user_profile(db, user_id, data)
+        return profile
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Accounts ---------
+
+@app.post("/financial/accounts", response_model=AccountResponse)
+def add_account(data: AccountCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create a new account"""
+    try:
+        user_id = _user if _user else "anonymous"
+        account = create_account(db, user_id, data)
+        return account
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/accounts", response_model=List[AccountResponse])
+def list_accounts(active_only: bool = True, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get all accounts"""
+    try:
+        user_id = _user if _user else "anonymous"
+        accounts = get_accounts(db, user_id, active_only=active_only)
+        return accounts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/accounts/{account_id}", response_model=AccountResponse)
+def get_account_detail(account_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get specific account"""
+    try:
+        user_id = _user if _user else "anonymous"
+        account = get_account(db, user_id, account_id)
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+        return account
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/accounts/{account_id}", response_model=AccountResponse)
+def update_account_endpoint(account_id: int, data: AccountUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update account"""
+    try:
+        user_id = _user if _user else "anonymous"
+        account = update_account(db, user_id, account_id, data)
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+        return account
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/financial/accounts/{account_id}")
+def delete_account_endpoint(account_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Delete account"""
+    try:
+        user_id = _user if _user else "anonymous"
+        success = delete_account(db, user_id, account_id)
+        if success:
+            return {"message": "Account deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Account not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Transactions ---------
+
+@app.post("/financial/transactions", response_model=TransactionResponse)
+def add_transaction(data: TransactionCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create a new transaction"""
+    try:
+        user_id = _user if _user else "anonymous"
+        transaction = create_transaction(db, user_id, data)
+        return transaction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/transactions", response_model=List[TransactionResponse])
+def list_transactions(
+    account_id: int = None,
+    transaction_type: str = None,
+    limit: int = 100,
+    _user=Depends(_require_auth_optional),
+    db=Depends(get_financial_db)
+):
+    """Get transactions with filters"""
+    try:
+        user_id = _user if _user else "anonymous"
+        transactions = get_transactions(db, user_id, account_id=account_id, transaction_type=transaction_type, limit=limit)
+        return transactions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/transactions/{transaction_id}", response_model=TransactionResponse)
+def update_transaction_endpoint(transaction_id: int, data: TransactionUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update transaction"""
+    try:
+        user_id = _user if _user else "anonymous"
+        transaction = update_transaction(db, user_id, transaction_id, data)
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        return transaction
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/financial/transactions/{transaction_id}")
+def delete_transaction_endpoint(transaction_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Delete transaction"""
+    try:
+        user_id = _user if _user else "anonymous"
+        success = delete_transaction(db, user_id, transaction_id)
+        if success:
+            return {"message": "Transaction deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Budgets ---------
+
+@app.post("/financial/budgets", response_model=BudgetResponse)
+def add_budget(data: BudgetCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create or update a budget"""
+    try:
+        user_id = _user if _user else "anonymous"
+        budget = create_budget(db, user_id, data)
+        return budget
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/budgets", response_model=List[BudgetResponse])
+def list_budgets(month: int = None, year: int = None, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get budgets, optionally filtered by month/year"""
+    try:
+        user_id = _user if _user else "anonymous"
+        budgets = get_budgets(db, user_id, month=month, year=year)
+        return budgets
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/budgets/{budget_id}", response_model=BudgetResponse)
+def update_budget_endpoint(budget_id: int, data: BudgetUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update budget"""
+    try:
+        user_id = _user if _user else "anonymous"
+        budget = update_budget(db, user_id, budget_id, data)
+        if not budget:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        return budget
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Financial Goals ---------
+
+@app.post("/financial/goals", response_model=FinancialGoalResponse)
+def add_goal(data: FinancialGoalCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create a new financial goal"""
+    try:
+        user_id = _user if _user else "anonymous"
+        goal = create_goal(db, user_id, data)
+        return goal
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/goals", response_model=List[FinancialGoalResponse])
+def list_goals(active_only: bool = False, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get financial goals"""
+    try:
+        user_id = _user if _user else "anonymous"
+        goals = get_goals(db, user_id, active_only=active_only)
+        return goals
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/goals/{goal_id}", response_model=FinancialGoalResponse)
+def update_goal_endpoint(goal_id: int, data: FinancialGoalUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update financial goal"""
+    try:
+        user_id = _user if _user else "anonymous"
+        goal = update_goal(db, user_id, goal_id, data)
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        return goal
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/financial/goals/{goal_id}")
+def delete_goal_endpoint(goal_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Delete financial goal"""
+    try:
+        user_id = _user if _user else "anonymous"
+        success = delete_goal(db, user_id, goal_id)
+        if success:
+            return {"message": "Goal deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Goal not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Debts ---------
+
+@app.post("/financial/debts", response_model=DebtResponse)
+def add_debt(data: DebtCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create a new debt entry"""
+    try:
+        user_id = _user if _user else "anonymous"
+        debt = create_debt(db, user_id, data)
+        return debt
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/debts", response_model=List[DebtResponse])
+def list_debts(active_only: bool = False, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get debts"""
+    try:
+        user_id = _user if _user else "anonymous"
+        debts = get_debts(db, user_id, active_only=active_only)
+        return debts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/debts/{debt_id}", response_model=DebtResponse)
+def update_debt_endpoint(debt_id: int, data: DebtUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update debt"""
+    try:
+        user_id = _user if _user else "anonymous"
+        debt = update_debt(db, user_id, debt_id, data)
+        if not debt:
+            raise HTTPException(status_code=404, detail="Debt not found")
+        return debt
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/financial/debts/{debt_id}")
+def delete_debt_endpoint(debt_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Delete debt"""
+    try:
+        user_id = _user if _user else "anonymous"
+        success = delete_debt(db, user_id, debt_id)
+        if success:
+            return {"message": "Debt deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Debt not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Investments ---------
+
+@app.post("/financial/investments", response_model=InvestmentResponse)
+def add_investment(data: InvestmentCreate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Create a new investment entry"""
+    try:
+        user_id = _user if _user else "anonymous"
+        investment = create_investment(db, user_id, data)
+        return investment
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/investments", response_model=List[InvestmentResponse])
+def list_investments(_user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get investments"""
+    try:
+        user_id = _user if _user else "anonymous"
+        investments = get_investments(db, user_id)
+        return investments
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/financial/investments/{investment_id}", response_model=InvestmentResponse)
+def update_investment_endpoint(investment_id: int, data: InvestmentUpdate, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Update investment"""
+    try:
+        user_id = _user if _user else "anonymous"
+        investment = update_investment(db, user_id, investment_id, data)
+        if not investment:
+            raise HTTPException(status_code=404, detail="Investment not found")
+        return investment
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/financial/investments/{investment_id}")
+def delete_investment_endpoint(investment_id: int, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Delete investment"""
+    try:
+        user_id = _user if _user else "anonymous"
+        success = delete_investment(db, user_id, investment_id)
+        if success:
+            return {"message": "Investment deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Investment not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------- Financial Summary & Analytics ---------
+
+@app.get("/financial/summary", response_model=FinancialSummary)
+def get_summary(_user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get comprehensive financial summary"""
+    try:
+        user_id = _user if _user else "anonymous"
+        summary = get_financial_summary(db, user_id)
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/spending-by-category")
+def spending_by_category(
+    start_date: str = None,
+    end_date: str = None,
+    _user=Depends(_require_auth_optional),
+    db=Depends(get_financial_db)
+):
+    """Get spending breakdown by category"""
+    try:
+        user_id = _user if _user else "anonymous"
+        from datetime import datetime
+        
+        if not start_date or not end_date:
+            # Default to current month
+            now = datetime.utcnow()
+            start = datetime(now.year, now.month, 1)
+            end = datetime(now.year, now.month + 1, 1) if now.month < 12 else datetime(now.year + 1, 1, 1)
+        else:
+            start = datetime.fromisoformat(start_date)
+            end = datetime.fromisoformat(end_date)
+        
+        data = get_spending_by_category(db, user_id, start, end)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/financial/income-vs-expenses")
+def income_vs_expenses(months: int = 6, _user=Depends(_require_auth_optional), db=Depends(get_financial_db)):
+    """Get monthly income vs expenses trend"""
+    try:
+        user_id = _user if _user else "anonymous"
+        data = get_income_vs_expenses_trend(db, user_id, months=months)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

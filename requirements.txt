@@ -19,6 +19,7 @@ passlib[argon2]==1.7.4
 python-jose[cryptography]==3.3.0
 python-dotenv==1.0.1
 PyMySQL==1.1.1
+pymongo==4.6.1
 email-validator==2.2.0
 # Optional heavy ML packages are in requirements-ml.txt (not installed in default image)
 # Use a PyMuPDF version with prebuilt Windows wheels (compatible abi3 wheel)

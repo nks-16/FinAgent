@@ -10,6 +10,7 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - DATABASE_URL=${DATABASE_URL:-mysql+pymysql://finagent:finagent@mysql:3306/finagent}
+      - MONGODB_URL=${MONGODB_URL:-mongodb://finagent:finagent@mongodb:27017/finagent_conversations?authSource=admin}
       - JWT_SECRET=${JWT_SECRET:-dev-secret}
       - REQUIRE_AUTH=${REQUIRE_AUTH:-false}
       - ANOMALY_MODEL_PATH=${ANOMALY_MODEL_PATH:-}
@@ -19,6 +20,7 @@ services:
     depends_on:
       - chroma
       - mysql
+      - mongodb
   chroma:
     image: ghcr.io/chroma-core/chroma:latest
     ports:
@@ -34,6 +36,16 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
     volumes:
       - mysql_data:/var/lib/mysql
+  mongodb:
+    image: mongo:7.0
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=finagent
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-finagent}
+      - MONGO_INITDB_DATABASE=finagent_conversations
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
   frontend:
     build:
       context: ./frontend
@@ -57,3 +69,4 @@ volumes:
   mysql_data:
   chroma_data:
   models_data:
+  mongo_data:
