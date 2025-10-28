@@ -1,0 +1,1169 @@
+import React, { useEffect, useState } from 'react'import React, { useEffect, useState } from 'react'
+
+import { api, setToken } from '../lib/api'import { api, setToken, apiJava } from '../lib/api'
+
+import ThemeToggle from '../components/ThemeToggle'import ThemeToggle from '../components/ThemeToggle'
+
+import { import RecommendationCard from '../components/RecommendationCard'
+
+  Wallet, TrendingUp, TrendingDown, DollarSign, Target, 
+
+  CreditCard, PiggyBank, AlertCircle, Plus, Edit2, User,export default function Dashboard({ token, onLogout }){
+
+  ArrowUpRight, ArrowDownRight, Calendar, Home, ShoppingBag,  const [health, setHealth] = useState(null)
+
+  Utensils, Car, Heart, Film, GraduationCap  const [sys, setSys] = useState(null)
+
+} from 'lucide-react'  const [recs, setRecs] = useState(null)
+
+import {   const [recsLoading, setRecsLoading] = useState(false)
+
+  PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
+
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer   useEffect(()=>{ 
+
+} from 'recharts'    setToken(token)
+
+    api.health().then(setHealth).catch(()=>{}) 
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']    apiJava.systemHealth().then(setSys).catch(()=>{})
+
+    loadRecommendations()
+
+const categoryIcons = {  },[])
+
+  groceries: ShoppingBag,
+
+  dining: Utensils,  const loadRecommendations = async () => {
+
+  transportation: Car,    setRecsLoading(true)
+
+  healthcare: Heart,    try {
+
+  entertainment: Film,      // Sample user data for demo; in production fetch from user profile
+
+  education: GraduationCap,      const userData = {
+
+  housing: Home,        monthly_income: 5000,
+
+}        current_needs: 2200,
+
+        current_wants: 1800,
+
+export default function Dashboard({ token, onLogout }) {        current_savings: 800,
+
+  const [activeTab, setActiveTab] = useState('overview')        debts: [
+
+  const [profile, setProfile] = useState(null)          { name: 'Credit Card', balance: 3000, rate: 18.5 },
+
+  const [summary, setSummary] = useState(null)          { name: 'Auto Loan', balance: 12000, rate: 5.2 },
+
+  const [accounts, setAccounts] = useState([])        ],
+
+  const [transactions, setTransactions] = useState([])        monthly_expenses: 2500,
+
+  const [budgets, setBudgets] = useState([])        risk_profile: 'moderate',
+
+  const [goals, setGoals] = useState([])        age: 32,
+
+  const [debts, setDebts] = useState([])        income: 60000,
+
+  const [spending, setSpending] = useState([])        savings: 15000,
+
+  const [trends, setTrends] = useState([])        debt: 15000,
+
+  const [loading, setLoading] = useState(true)        investment_horizon_years: 15,
+
+  const [showProfileModal, setShowProfileModal] = useState(false)      }
+
+  const [showAccountModal, setShowAccountModal] = useState(false)      const res = await api.recommendations(userData)
+
+  const [showTransactionModal, setShowTransactionModal] = useState(false)      setRecs(res)
+
+  const [showBudgetModal, setShowBudgetModal] = useState(false)    } finally {
+
+  const [showGoalModal, setShowGoalModal] = useState(false)      setRecsLoading(false)
+
+    }
+
+  useEffect(() => {  }
+
+    setToken(token)
+
+    loadAllData()  return (
+
+  }, [token])    <div className="min-h-screen bg-gray-50 dark:bg-black">
+
+      <nav className="navbar px-4 py-3">
+
+  const loadAllData = async () => {        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+
+    setLoading(true)          <span className="text-2xl font-bold text-black dark:text-white">FinAgent</span>
+
+    try {          <div className="flex gap-2 items-center">
+
+      const [            <a className="btn-outline text-sm" href="/chat">Chat</a>
+
+        profileData,            <a className="btn-outline text-sm" href="/anomaly">Anomaly</a>
+
+        summaryData,            <ThemeToggle />
+
+        accountsData,            <button className="btn-outline text-sm" onClick={onLogout}>Logout</button>
+
+        transactionsData,          </div>
+
+        budgetsData,        </div>
+
+        goalsData,      </nav>
+
+        debtsData,
+
+        spendingData,      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        trendsData        {/* Welcome Section */}
+
+      ] = await Promise.all([        <div className="card">
+
+        api.getProfile().catch(() => null),          <h4 className="text-2xl font-bold text-black dark:text-white mb-2">
+
+        api.getFinancialSummary().catch(() => null),            Welcome to Your Financial Dashboard
+
+        api.getAccounts().catch(() => []),          </h4>
+
+        api.getTransactions(null, null, 10).catch(() => []),          <p className="text-gray-600 dark:text-gray-400">
+
+        api.getBudgets().catch(() => []),            Get personalized financial recommendations powered by AI
+
+        api.getGoals(true).catch(() => []),          </p>
+
+        api.getDebts(true).catch(() => []),        </div>
+
+        api.getSpendingByCategory().catch(() => []),
+
+        api.getIncomeVsExpenses(6).catch(() => [])        {/* Recommendations Section */}
+
+      ])        <div className="card">
+
+                <h5 className="text-xl font-bold mb-4 text-black dark:text-white">Financial Recommendations</h5>
+
+      setProfile(profileData)          {recsLoading && <p className="text-gray-600 dark:text-gray-400">Loading recommendations...</p>}
+
+      setSummary(summaryData)          {!recsLoading && recs && (
+
+      setAccounts(accountsData)            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      setTransactions(transactionsData)              {recs.budget && (
+
+      setBudgets(budgetsData)                <RecommendationCard title="Budget (50/30/20)" data={recs.budget} onApply={()=>alert('Apply budget logic here')} />
+
+      setGoals(goalsData)              )}
+
+      setDebts(debtsData)              {recs.debt && (
+
+      setSpending(spendingData)                <RecommendationCard title="Debt Payoff Strategy" data={recs.debt} />
+
+      setTrends(trendsData)              )}
+
+    } finally {              {recs.emergency_fund && (
+
+      setLoading(false)                <RecommendationCard title="Emergency Fund" data={recs.emergency_fund} />
+
+    }              )}
+
+  }              {recs.risk && (
+
+                <RecommendationCard title="Risk Profile & Allocation" data={recs.risk} />
+
+  const formatCurrency = (amount) => {              )}
+
+    return new Intl.NumberFormat('en-US', {            </div>
+
+      style: 'currency',          )}
+
+      currency: profile?.currency || 'USD'        </div>
+
+    }).format(amount || 0)
+
+  }        {/* System Status */}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  const formatDate = (dateString) => {          <div className="card">
+
+    return new Date(dateString).toLocaleDateString('en-US', {            <h6 className="font-bold mb-3 text-black dark:text-white">System Status</h6>
+
+      month: 'short',            <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto text-black dark:text-white">
+
+      day: 'numeric',              {health ? JSON.stringify(health, null, 2) : 'Loading...'}
+
+      year: 'numeric'            </pre>
+
+    })          </div>
+
+  }          <div className="card">
+
+            <h6 className="font-bold mb-3 text-black dark:text-white">Backend Health</h6>
+
+  const getCategoryIcon = (category) => {            <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto text-black dark:text-white">
+
+    const Icon = categoryIcons[category] || ShoppingBag              {sys ? JSON.stringify(sys, null, 2) : 'Loading...'}
+
+    return <Icon className="w-4 h-4" />            </pre>
+
+  }          </div>
+
+        </div>
+
+  if (loading) {      </div>
+
+    return (    </div>
+
+      <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">  )
+
+        <div className="text-center">}
+
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading your financial data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-black">
+      {/* Navigation */}
+      <nav className="navbar px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-2xl font-bold text-black dark:text-white">FinAgent</span>
+            <div className="hidden md:flex gap-2">
+              <a className="btn-outline text-sm" href="/chat">💬 Chat</a>
+              <a className="btn-outline text-sm" href="/anomaly">🔍 Anomaly Detection</a>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center">
+            <button 
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              {profile?.profile_photo_url ? (
+                <img src={profile.profile_photo_url} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                  {profile?.full_name?.[0] || profile?.username?.[0] || 'U'}
+                </div>
+              )}
+              <span className="hidden md:inline text-sm text-black dark:text-white">
+                {profile?.full_name || profile?.username || 'User'}
+              </span>
+            </button>
+            <ThemeToggle />
+            <button className="btn-outline text-sm" onClick={onLogout}>Logout</button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Welcome Section */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
+            Welcome back, {profile?.full_name?.split(' ')[0] || 'there'}! 👋
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Here's your financial overview for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm opacity-90">Net Worth</span>
+              <Wallet className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summary?.net_worth)}</p>
+            <p className="text-xs opacity-90 mt-1">
+              Assets: {formatCurrency(summary?.total_assets)}
+            </p>
+          </div>
+
+          <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm opacity-90">Monthly Income</span>
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summary?.total_income_this_month)}</p>
+            <p className="text-xs opacity-90 mt-1 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" />
+              From {accounts.filter(a => a.account_type !== 'credit_card').length} accounts
+            </p>
+          </div>
+
+          <div className="card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm opacity-90">Monthly Expenses</span>
+              <TrendingDown className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summary?.total_expenses_this_month)}</p>
+            <p className="text-xs opacity-90 mt-1 flex items-center gap-1">
+              <ArrowDownRight className="w-3 h-3" />
+              {summary?.top_spending_category && `Top: ${summary.top_spending_category}`}
+            </p>
+          </div>
+
+          <div className={`card ${summary?.monthly_cash_flow >= 0 ? 'bg-gradient-to-br from-purple-500 to-purple-600' : 'bg-gradient-to-br from-red-500 to-red-600'} text-white`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm opacity-90">Cash Flow</span>
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summary?.monthly_cash_flow)}</p>
+            <p className="text-xs opacity-90 mt-1">
+              {summary?.monthly_cash_flow >= 0 ? 'Positive' : 'Negative'} this month
+            </p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-6 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex gap-4 overflow-x-auto">
+            {['overview', 'accounts', 'transactions', 'budgets', 'goals', 'debts'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 font-medium capitalize whitespace-nowrap border-b-2 transition-colors ${
+                  activeTab === tab
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Spending by Category */}
+              <div className="card">
+                <h3 className="text-lg font-bold text-black dark:text-white mb-4">Spending by Category</h3>
+                {spending.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={spending}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="amount"
+                      >
+                        {spending.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-gray-400">
+                    <div className="text-center">
+                      <ShoppingBag className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No spending data yet</p>
+                      <button 
+                        onClick={() => setShowTransactionModal(true)}
+                        className="btn-primary mt-3 text-sm"
+                      >
+                        Add Transaction
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Income vs Expenses Trend */}
+              <div className="card">
+                <h3 className="text-lg font-bold text-black dark:text-white mb-4">Income vs Expenses</h3>
+                {trends.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={trends}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                      <Legend />
+                      <Bar dataKey="income" fill="#10b981" name="Income" />
+                      <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-gray-400">
+                    <div className="text-center">
+                      <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No trend data available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Goals Progress */}
+            {goals.length > 0 && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-black dark:text-white">Financial Goals</h3>
+                  <button onClick={() => setShowGoalModal(true)} className="btn-primary text-sm">
+                    <Plus className="w-4 h-4 inline mr-1" /> Add Goal
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {goals.slice(0, 3).map(goal => (
+                    <div key={goal.id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-5 h-5 text-blue-600" />
+                          <span className="font-medium text-black dark:text-white">{goal.name}</span>
+                        </div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {goal.progress_percentage}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${Math.min(goal.progress_percentage, 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <span>{formatCurrency(goal.current_amount)} saved</span>
+                        <span>Goal: {formatCurrency(goal.target_amount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Transactions */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-black dark:text-white">Recent Transactions</h3>
+                <button onClick={() => setShowTransactionModal(true)} className="btn-primary text-sm">
+                  <Plus className="w-4 h-4 inline mr-1" /> Add Transaction
+                </button>
+              </div>
+              {transactions.length > 0 ? (
+                <div className="space-y-2">
+                  {transactions.slice(0, 5).map(txn => (
+                    <div key={txn.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          txn.transaction_type === 'income' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
+                        }`}>
+                          {getCategoryIcon(txn.category)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-black dark:text-white">{txn.description || txn.merchant || 'Transaction'}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(txn.transaction_date)}</p>
+                        </div>
+                      </div>
+                      <span className={`font-bold ${
+                        txn.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {txn.transaction_type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(txn.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No transactions yet</p>
+                  <button 
+                    onClick={() => setShowTransactionModal(true)}
+                    className="btn-primary mt-3 text-sm"
+                  >
+                    Add Your First Transaction
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'accounts' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-black dark:text-white">Your Accounts</h2>
+              <button onClick={() => setShowAccountModal(true)} className="btn-primary">
+                <Plus className="w-4 h-4 inline mr-1" /> Add Account
+              </button>
+            </div>
+            {accounts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {accounts.map(account => (
+                  <div key={account.id} className="card hover:shadow-lg transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {account.account_type === 'checking' && <Wallet className="w-5 h-5 text-blue-600" />}
+                        {account.account_type === 'savings' && <PiggyBank className="w-5 h-5 text-green-600" />}
+                        {account.account_type === 'credit_card' && <CreditCard className="w-5 h-5 text-orange-600" />}
+                        {account.account_type === 'investment' && <TrendingUp className="w-5 h-5 text-purple-600" />}
+                        <div>
+                          <h4 className="font-bold text-black dark:text-white">{account.name}</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{account.institution}</p>
+                        </div>
+                      </div>
+                      <button className="text-gray-400 hover:text-gray-600">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-2xl font-bold text-black dark:text-white mb-1">
+                      {formatCurrency(account.balance)}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {account.account_number_last4 && `****${account.account_number_last4}`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card text-center py-12">
+                <Wallet className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-700" />
+                <h3 className="text-xl font-bold text-black dark:text-white mb-2">No accounts yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Add your bank accounts, credit cards, and investments to start tracking
+                </p>
+                <button onClick={() => setShowAccountModal(true)} className="btn-primary">
+                  <Plus className="w-4 h-4 inline mr-1" /> Add Your First Account
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'budgets' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-black dark:text-white">Monthly Budgets</h2>
+              <button onClick={() => setShowBudgetModal(true)} className="btn-primary">
+                <Plus className="w-4 h-4 inline mr-1" /> Create Budget
+              </button>
+            </div>
+            {budgets.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {budgets.map(budget => (
+                  <div key={budget.id} className="card">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-black dark:text-white capitalize">{budget.category}</h4>
+                      <span className={`text-sm font-medium ${
+                        budget.percentage_used > 100 ? 'text-red-600' : 
+                        budget.percentage_used > 80 ? 'text-orange-600' : 
+                        'text-green-600'
+                      }`}>
+                        {budget.percentage_used.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2">
+                      <div 
+                        className={`h-3 rounded-full transition-all ${
+                          budget.percentage_used > 100 ? 'bg-red-600' : 
+                          budget.percentage_used > 80 ? 'bg-orange-600' : 
+                          'bg-green-600'
+                        }`}
+                        style={{ width: `${Math.min(budget.percentage_used, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                      <span>Spent: {formatCurrency(budget.current_spending)}</span>
+                      <span>Budget: {formatCurrency(budget.monthly_limit)}</span>
+                    </div>
+                    {budget.percentage_used > 90 && (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-orange-600">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Almost over budget!</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card text-center py-12">
+                <DollarSign className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-700" />
+                <h3 className="text-xl font-bold text-black dark:text-white mb-2">No budgets set</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Create monthly budgets to track and control your spending
+                </p>
+                <button onClick={() => setShowBudgetModal(true)} className="btn-primary">
+                  <Plus className="w-4 h-4 inline mr-1" /> Create Your First Budget
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add remaining tabs - transactions, goals, debts */}
+      </div>
+
+      {/* Profile Modal */}
+      {showProfileModal && <ProfileModal profile={profile} onClose={() => setShowProfileModal(false)} onSave={loadAllData} formatCurrency={formatCurrency} />}
+      
+      {/* Other Modals */}
+      {showAccountModal && <AccountModal onClose={() => setShowAccountModal(false)} onSave={loadAllData} />}
+      {showTransactionModal && <TransactionModal accounts={accounts} onClose={() => setShowTransactionModal(false)} onSave={loadAllData} />}
+      {showBudgetModal && <BudgetModal onClose={() => setShowBudgetModal(false)} onSave={loadAllData} />}
+      {showGoalModal && <GoalModal onClose={() => setShowGoalModal(false)} onSave={loadAllData} />}
+    </div>
+  )
+}
+
+// Profile Modal Component
+function ProfileModal({ profile, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    full_name: profile?.full_name || '',
+    email: profile?.email || '',
+    phone: profile?.phone || '',
+    age: profile?.age || '',
+    occupation: profile?.occupation || '',
+    annual_income: profile?.annual_income || '',
+    monthly_income: profile?.monthly_income || '',
+    risk_tolerance: profile?.risk_tolerance || 'moderate',
+    profile_photo_url: profile?.profile_photo_url || ''
+  })
+  const [saving, setSaving] = useState(false)
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData({ ...formData, profile_photo_url: reader.result })
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await api.updateProfile(formData)
+      await onSave()
+      onClose()
+    } catch (error) {
+      alert('Failed to update profile: ' + error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-2xl font-bold text-black dark:text-white">Edit Profile</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="flex flex-col items-center mb-4">
+            {formData.profile_photo_url ? (
+              <img src={formData.profile_photo_url} alt="Profile" className="w-24 h-24 rounded-full object-cover mb-3" />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mb-3">
+                <User className="w-12 h-12 text-gray-400" />
+              </div>
+            )}
+            <label className="btn-outline cursor-pointer text-sm">
+              Upload Photo
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className="input w-full"
+                placeholder="John Doe"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="input w-full"
+                placeholder="john@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="input w-full"
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Age</label>
+              <input
+                type="number"
+                value={formData.age}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                className="input w-full"
+                placeholder="30"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Occupation</label>
+              <input
+                type="text"
+                value={formData.occupation}
+                onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                className="input w-full"
+                placeholder="Software Engineer"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Annual Income</label>
+              <input
+                type="number"
+                value={formData.annual_income}
+                onChange={(e) => setFormData({ ...formData, annual_income: e.target.value })}
+                className="input w-full"
+                placeholder="75000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Income</label>
+              <input
+                type="number"
+                value={formData.monthly_income}
+                onChange={(e) => setFormData({ ...formData, monthly_income: e.target.value })}
+                className="input w-full"
+                placeholder="6250"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Risk Tolerance</label>
+              <select
+                value={formData.risk_tolerance}
+                onChange={(e) => setFormData({ ...formData, risk_tolerance: e.target.value })}
+                className="input w-full"
+              >
+                <option value="conservative">Conservative</option>
+                <option value="moderate">Moderate</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button type="submit" disabled={saving} className="btn-primary flex-1">
+              {saving ? 'Saving...' : 'Save Profile'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-outline flex-1">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Account Modal Component
+function AccountModal({ onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    account_type: 'checking',
+    institution: '',
+    balance: 0,
+    account_number_last4: ''
+  })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await api.createAccount(formData)
+      await onSave()
+      onClose()
+    } catch (error) {
+      alert('Failed to create account: ' + error.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-black dark:text-white">Add Account</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Name</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="input w-full"
+              placeholder="My Checking Account"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Type</label>
+            <select
+              value={formData.account_type}
+              onChange={(e) => setFormData({ ...formData, account_type: e.target.value })}
+              className="input w-full"
+            >
+              <option value="checking">Checking</option>
+              <option value="savings">Savings</option>
+              <option value="credit_card">Credit Card</option>
+              <option value="investment">Investment</option>
+              <option value="loan">Loan</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Institution</label>
+            <input
+              type="text"
+              value={formData.institution}
+              onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+              className="input w-full"
+              placeholder="Bank of America"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Balance</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.balance}
+              onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="1000.00"
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" className="btn-primary flex-1">Add Account</button>
+            <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Transaction Modal Component
+function TransactionModal({ accounts, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    account_id: accounts[0]?.id || '',
+    transaction_type: 'expense',
+    category: 'groceries',
+    amount: 0,
+    description: '',
+    merchant: '',
+    transaction_date: new Date().toISOString().split('T')[0]
+  })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await api.createTransaction(formData)
+      await onSave()
+      onClose()
+    } catch (error) {
+      alert('Failed to create transaction: ' + error.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-black dark:text-white">Add Transaction</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account</label>
+            <select
+              required
+              value={formData.account_id}
+              onChange={(e) => setFormData({ ...formData, account_id: e.target.value })}
+              className="input w-full"
+            >
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+            <select
+              value={formData.transaction_type}
+              onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
+              className="input w-full"
+            >
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="input w-full"
+            >
+              <option value="salary">Salary</option>
+              <option value="groceries">Groceries</option>
+              <option value="dining">Dining</option>
+              <option value="transportation">Transportation</option>
+              <option value="entertainment">Entertainment</option>
+              <option value="shopping">Shopping</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="utilities">Utilities</option>
+              <option value="housing">Housing</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="50.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="input w-full"
+              placeholder="Weekly grocery shopping"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+            <input
+              type="date"
+              value={formData.transaction_date}
+              onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" className="btn-primary flex-1">Add Transaction</button>
+            <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Budget Modal Component
+function BudgetModal({ onClose, onSave }) {
+  const currentDate = new Date()
+  const [formData, setFormData] = useState({
+    category: 'groceries',
+    monthly_limit: 0,
+    month: currentDate.getMonth() + 1,
+    year: currentDate.getFullYear()
+  })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await api.createBudget(formData)
+      await onSave()
+      onClose()
+    } catch (error) {
+      alert('Failed to create budget: ' + error.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-black dark:text-white">Create Budget</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="input w-full"
+            >
+              <option value="groceries">Groceries</option>
+              <option value="dining">Dining</option>
+              <option value="transportation">Transportation</option>
+              <option value="entertainment">Entertainment</option>
+              <option value="shopping">Shopping</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="utilities">Utilities</option>
+              <option value="housing">Housing</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Limit</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formData.monthly_limit}
+              onChange={(e) => setFormData({ ...formData, monthly_limit: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="500.00"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+              <input
+                type="number"
+                min="1"
+                max="12"
+                value={formData.month}
+                onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
+                className="input w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+              <input
+                type="number"
+                value={formData.year}
+                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                className="input w-full"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" className="btn-primary flex-1">Create Budget</button>
+            <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Goal Modal Component
+function GoalModal({ onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    goal_type: 'emergency_fund',
+    target_amount: 0,
+    current_amount: 0,
+    monthly_contribution: 0,
+    target_date: '',
+    priority: 1
+  })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await api.createGoal(formData)
+      await onSave()
+      onClose()
+    } catch (error) {
+      alert('Failed to create goal: ' + error.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-black dark:text-white">Create Financial Goal</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Name</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="input w-full"
+              placeholder="Emergency Fund"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Type</label>
+            <select
+              value={formData.goal_type}
+              onChange={(e) => setFormData({ ...formData, goal_type: e.target.value })}
+              className="input w-full"
+            >
+              <option value="emergency_fund">Emergency Fund</option>
+              <option value="retirement">Retirement</option>
+              <option value="home_purchase">Home Purchase</option>
+              <option value="education">Education</option>
+              <option value="vacation">Vacation</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formData.target_amount}
+              onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="10000.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.current_amount}
+              onChange={(e) => setFormData({ ...formData, current_amount: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="2000.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Contribution</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.monthly_contribution}
+              onChange={(e) => setFormData({ ...formData, monthly_contribution: parseFloat(e.target.value) })}
+              className="input w-full"
+              placeholder="500.00"
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" className="btn-primary flex-1">Create Goal</button>
+            <button type="button" onClick={onClose} className="btn-outline flex-1">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

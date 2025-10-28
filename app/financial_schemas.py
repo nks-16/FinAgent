@@ -73,8 +73,10 @@ class UserProfileCreate(BaseModel):
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
     age: Optional[int] = None
     occupation: Optional[str] = None
+    profile_photo_url: Optional[str] = None
     annual_income: Optional[float] = None
     monthly_income: Optional[float] = None
     currency: Optional[str] = None
