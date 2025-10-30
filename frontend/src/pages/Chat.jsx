@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 import ThemeToggle from '../components/ThemeToggle'
+import { X } from 'lucide-react'
 
 export default function Chat(){
   const [prompt, setPrompt] = useState('')
@@ -9,7 +10,38 @@ export default function Chat(){
   const [currentSession, setCurrentSession] = useState(null)
   const [messages, setMessages] = useState([])
   const [showSidebar, setShowSidebar] = useState(true)
+  const [toast, setToast] = useState({ show: false, message: '', type: '' })
+  const [confirmModal, setConfirmModal] = useState({ show: false, message: '', onConfirm: null })
   const messagesEndRef = useRef(null)
+
+  // Toast auto-dismiss effect
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: '' })
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast.show])
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+  }
+
+  const showConfirm = (message, onConfirm) => {
+    setConfirmModal({ show: true, message, onConfirm })
+  }
+
+  const handleConfirm = () => {
+    if (confirmModal.onConfirm) {
+      confirmModal.onConfirm()
+    }
+    setConfirmModal({ show: false, message: '', onConfirm: null })
+  }
+
+  const handleCancelConfirm = () => {
+    setConfirmModal({ show: false, message: '', onConfirm: null })
+  }
 
   // Load conversations on mount
   useEffect(() => {
@@ -38,6 +70,7 @@ export default function Chat(){
       }
     } catch (error) {
       console.error('Failed to load conversations:', error)
+      showToast('⚠️ Unable to load your conversations. Please refresh the page.', 'error')
     }
   }
 
@@ -48,6 +81,7 @@ export default function Chat(){
     } catch (error) {
       console.error('Failed to load messages:', error)
       setMessages([])
+      showToast('⚠️ Unable to load conversation messages.', 'error')
     }
   }
 
@@ -57,23 +91,31 @@ export default function Chat(){
       setConversations([newConv, ...conversations])
       setCurrentSession(newConv.session_id)
       setMessages([])
+      showToast('✅ New conversation started!', 'success')
     } catch (error) {
       console.error('Failed to create conversation:', error)
+      showToast('⚠️ Unable to create a new conversation. Please try again.', 'error')
     }
   }
 
   const deleteConversation = async (sessionId) => {
-    if (!window.confirm('Delete this conversation?')) return
-    try {
-      await api.deleteConversation(sessionId)
-      setConversations(conversations.filter(c => c.session_id !== sessionId))
-      if (currentSession === sessionId) {
-        setCurrentSession(null)
-        setMessages([])
+    showConfirm(
+      '⚠️ Are you sure you want to delete this conversation? This action cannot be undone.',
+      async () => {
+        try {
+          await api.deleteConversation(sessionId)
+          setConversations(conversations.filter(c => c.session_id !== sessionId))
+          if (currentSession === sessionId) {
+            setCurrentSession(null)
+            setMessages([])
+          }
+          showToast('✅ Conversation deleted successfully.', 'success')
+        } catch (error) {
+          console.error('Failed to delete conversation:', error)
+          showToast('⚠️ Unable to delete this conversation. Please try again.', 'error')
+        }
       }
-    } catch (error) {
-      console.error('Failed to delete conversation:', error)
-    }
+    )
   }
 
   const ask = async (e) => {
@@ -108,7 +150,7 @@ export default function Chat(){
       console.error('Chat error:', error)
       // Remove the optimistic user message on error
       setMessages(prev => prev.slice(0, -1))
-      alert('Failed to send message: ' + error.message)
+      showToast('⚠️ Failed to send message. Please try again.', 'error')
     } finally {
       setBusy(false)
     }
@@ -135,21 +177,23 @@ export default function Chat(){
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
-      <nav className="navbar px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
+      <nav className="bg-gray-800 px-4 py-3 border-b border-gray-700">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="btn-outline text-sm"
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-100 rounded-lg transition text-sm"
             >
-              {showSidebar ? '◀' : '▶'}
+              {showSidebar ? '◀ Hide' : '▶ Show'} Sidebar
             </button>
-            <span className="text-2xl font-bold text-black dark:text-white">FinAgent Chat</span>
+            <span className="text-2xl font-bold text-white">FinAgent Chat</span>
+            <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded-full">Personalized AI</span>
           </div>
           <div className="flex gap-2 items-center">
-            <a className="btn-outline text-sm" href="/">Dashboard</a>
-            <ThemeToggle />
+            <a className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-100 rounded-lg transition text-sm" href="/">
+              Dashboard
+            </a>
           </div>
         </div>
       </nav>
@@ -157,13 +201,13 @@ export default function Chat(){
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Conversation List */}
         {showSidebar && (
-          <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+          <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+            <div className="p-4 border-b border-gray-700">
               <button
                 onClick={createNewConversation}
-                className="btn-primary w-full"
+                className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
               >
-                + New Chat
+                <span className="text-xl">+</span> New Chat
               </button>
             </div>
             
@@ -171,17 +215,17 @@ export default function Chat(){
               {conversations.map((conv) => (
                 <div
                   key={conv.session_id}
-                  className={`p-3 border-b border-gray-200 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                    currentSession === conv.session_id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                  className={`p-3 border-b border-gray-700 cursor-pointer hover:bg-gray-700 transition-colors ${
+                    currentSession === conv.session_id ? 'bg-gray-700' : ''
                   }`}
                   onClick={() => setCurrentSession(conv.session_id)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-black dark:text-white truncate">
+                      <p className="text-sm font-medium text-white truncate">
                         {conv.title}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         {conv.message_count} messages • {formatDate(conv.updated_at)}
                       </p>
                     </div>
@@ -190,7 +234,7 @@ export default function Chat(){
                         e.stopPropagation()
                         deleteConversation(conv.session_id)
                       }}
-                      className="text-gray-400 hover:text-red-500 text-xs ml-2"
+                      className="text-gray-400 hover:text-red-400 text-xs ml-2"
                     >
                       🗑️
                     </button>
@@ -199,7 +243,7 @@ export default function Chat(){
               ))}
               
               {conversations.length === 0 && (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                <div className="p-4 text-center text-gray-400 text-sm">
                   No conversations yet. Start a new chat!
                 </div>
               )}
@@ -208,16 +252,16 @@ export default function Chat(){
         )}
         
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-gray-900">
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="max-w-4xl mx-auto space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-black dark:text-white mb-4">
+                  <h2 className="text-2xl font-bold text-white mb-4">
                     AI Financial Assistant
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-400">
                     Ask me anything about finance, markets, or investment strategies
                   </p>
                 </div>
@@ -231,8 +275,8 @@ export default function Chat(){
                   <div
                     className={`max-w-[80%] rounded-lg p-4 ${
                       msg.role === 'user'
-                        ? 'bg-black dark:bg-white text-white dark:text-black'
-                        : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-black dark:text-white'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 border border-gray-700 text-gray-100'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -257,18 +301,18 @@ export default function Chat(){
           </div>
           
           {/* Input Area */}
-          <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <div className="border-t border-gray-700 bg-gray-800 p-4">
             <div className="max-w-4xl mx-auto">
               <form onSubmit={ask} className="flex gap-2">
                 <input
-                  className="input-field flex-1"
+                  className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Type your financial question..."
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   disabled={busy}
                 />
                 <button
-                  className="btn-primary px-6"
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={busy || !prompt.trim()}
                 >
                   {busy ? '...' : 'Send'}
@@ -278,6 +322,58 @@ export default function Chat(){
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
+          <div className={`rounded-lg shadow-2xl p-4 pr-10 max-w-md ${
+            toast.type === 'success' ? 'bg-green-500 text-white' : 
+            toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => setToast({ show: false, message: '', type: '' })}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-md w-full animate-slide-up">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                Confirm Action
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                {confirmModal.message}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelConfirm}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

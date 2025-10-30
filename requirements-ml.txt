@@ -9,3 +9,8 @@ shap==0.41.0
 sentence-transformers==2.2.2
 llama-cpp-python
 google-generativeai
+
+# Hugging Face Transformers for Financial AI Models
+transformers==4.35.2
+torch==2.1.2
+# FinBERT and other financial models will be downloaded automatically

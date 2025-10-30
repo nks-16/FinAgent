@@ -48,6 +48,13 @@ from .financial_service import (
     get_financial_summary, get_spending_by_category, get_income_vs_expenses_trend
 )
 
+# Import ML endpoints
+try:
+    from .ml_endpoints import router as ml_router
+    ML_ENDPOINTS_AVAILABLE = True
+except ImportError:
+    ML_ENDPOINTS_AVAILABLE = False
+
 load_dotenv()
 app = FastAPI(title="FinAgent - LLM Financial Analyzer (agent)")
 
@@ -59,6 +66,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+# Include ML router if available
+if ML_ENDPOINTS_AVAILABLE:
+    app.include_router(ml_router)
 
 
 class QueryRequest(BaseModel):
